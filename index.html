@@ -156,6 +156,8 @@
         text-align: center;
         margin-bottom: 25px;
         color: #2c3e50;
+        position: relative; /* Needed for absolute positioning of sub-header */
+        padding-bottom: 30px; /* Make space for the absolute positioned element */
       }
 
       .header h1 {
@@ -163,10 +165,25 @@
         margin-bottom: 5px;
       }
 
-      .header h3 {
+      .header .sub-header-title {
+        font-size: 0.8em; /* Smaller font size */
+        color: #777;
+        position: absolute;
+        bottom: 0; /* Align to the bottom */
+        right: 0; /* Align to the right */
+        margin-right: 15px; /* Little spacing from the right edge */
+        margin-bottom: 5px; /* Little spacing from the bottom */
+      }
+
+      .header .location-info {
+        display: flex;
+        flex-wrap: wrap; /* Allow items to wrap */
+        justify-content: center;
+        gap: 10px 20px; /* Vertical and horizontal gap */
         font-size: 1.1em;
         color: #555;
         line-height: 1.6;
+        margin-top: 15px;
       }
 
       .panel {
@@ -282,6 +299,13 @@
           display: flex !important; /* Force show cards */
           flex-direction: column;
         }
+        .header .sub-header-title {
+          position: static; /* Remove absolute positioning on smaller screens */
+          text-align: center;
+          margin-top: 10px;
+          margin-right: 0;
+          margin-bottom: 0;
+        }
       }
 
       @media (min-width: 769px) {
@@ -302,17 +326,13 @@
 
     <div class="container">
       <header class="header">
-        <h1>A.F. Infosys (Admin Panel)</h1>
-
         <h1>મિલ્ક્ત પહોચની યાદી - વર્ષ : <span>2025-2026</span></h1>
-
-        <h3>
-          ગામ : <span>MEGHARAJ</span>
-          <br />
-          તાલકો : <span>MEGHARAJ</span>
-          <br />
-          જીલ્લો : <span>ARAVALLI</span>
-        </h3>
+        <div class="location-info">
+          <span>ગામ : <span>MEGHARAJ</span></span>
+          <span>તાલકો : <span>MEGHARAJ</span></span>
+          <span>જીલ્લો : <span>ARAVALLI</span></span>
+        </div>
+        <h3 class="sub-header-title">A.F. Infosys (Admin Panel)</h3>
       </header>
 
       <div class="panel secure-search">
@@ -356,6 +376,7 @@
         <table class="data-table">
           <thead>
             <tr>
+              <th>Milkat ID</th>
               <th>માલિકનું નામ</th>
               <th>સોસાયટી</th>
               <th>મોબાઈલ</th>
@@ -417,9 +438,6 @@
         const nameInput = nameInputElem.value.trim().toLowerCase();
         const mobileInput = mobileInputElem.value.trim();
         const selectedSociety = societyFilterElem.value.trim().toLowerCase();
-
-        // Removed the !nameInput && !mobileInput alert
-        // Admin can search with empty fields to see all records or apply filters
 
         // Validate minimum length for name and mobile (still useful for specific searches)
         if (nameInput && nameInput.length < 3) {
@@ -522,6 +540,10 @@
             card.className = "result-card";
             card.innerHTML = `
               <div class="result-card-item">
+                <span class="result-card-label">Milkat ID:</span>
+                <span class="result-card-value">${milkatId}</span>
+              </div>
+              <div class="result-card-item">
                 <span class="result-card-label">માલિકનું નામ:</span>
                 <span class="result-card-value">${row[1]}</span>
               </div>
@@ -562,11 +584,12 @@
             const milkatId = row.originalIndex;
             const tr = document.createElement("tr");
             tr.innerHTML = `
+              <td>${milkatId}</td>
               <td>${row[1]}</td>
               <td>${row[4]}</td>
               <td>${row[17]}</td>
               <td>₹${totalDue.toFixed(2)}</td>
-              <td><a href="/receipt.html?m_id=${milkatId}" class="action-button">View</a></td>
+              <td><a href="receipt.html?m_id=${milkatId}" class="action-button">View</a></td>
             `;
             resultBodyTable.appendChild(tr);
           });
@@ -599,39 +622,35 @@
       })();
 
       // Optional: Re-render results on window resize if current results are visible
-      // This ensures the view switches automatically if the user resizes their browser
+      // This ensures the view switches automatically if the user re-sizes their browser
       let resizeTimer;
       window.addEventListener("resize", () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-          // If there are records currently displayed (or if no search was performed yet, all should be shown)
-          // This is a simplified re-render; a more advanced solution would track the *last filtered* dataset.
-          // For now, the CSS media queries will handle the visual switch,
-          // and a new search will trigger the full JS re-render.
-          // If you want a full re-render on resize (e.g., if you sort data differently for mobile/desktop),
-          // you would need to store the `filtered` results globally after `handleSecureSearch` or `init`.
           const resultsContainer = document.getElementById("results");
           const resultsTableContainer = document.getElementById("resultsTable");
+
+          // Check if either results container is currently visible (implies data is loaded and displayed)
           if (
             resultsContainer.style.display === "flex" ||
             resultsTableContainer.style.display === "block"
           ) {
-            // Re-render based on the currently displayed records (if any) or all records if no search performed
-            // To achieve a proper re-render on resize without a new search,
-            // you would need to store the `filtered` array globally and pass it here.
-            // As the current setup relies on CSS for display switching, a full JS re-render might be overkill here,
-            // unless you have other responsive layout changes tied to JS.
-            // For now, if no search has been performed (i.e., all records are shown initially),
-            // we can just re-render all of them.
-            if (
-              !document.getElementById("searchName").value &&
-              !document.getElementById("searchMobile").value &&
-              !document.getElementById("societyFilter").value
-            ) {
-              renderSecureResults(allRecords.slice(1));
+            // Re-render based on the *currently filtered* data.
+            // If no filters are applied, this will re-render `allRecords.slice(1)`.
+            // If filters were applied, you'd need to store the `filtered` array from `handleSecureSearch`
+            // and pass it here. For simplicity and given the CSS handles the primary switch,
+            // we'll re-run `handleSecureSearch` if any filters are set, otherwise re-render all.
+            const nameInput = document.getElementById("searchName").value;
+            const mobileInput = document.getElementById("searchMobile").value;
+            const societyFilter =
+              document.getElementById("societyFilter").value;
+
+            if (nameInput || mobileInput || societyFilter) {
+              // If any filter is active, re-run the search logic
+              handleSecureSearch();
             } else {
-              // If a search was performed, we can't easily re-render without the `filtered` data.
-              // The CSS handles the display toggle in this case.
+              // Otherwise, re-render all records (as they are initially shown)
+              renderSecureResults(allRecords.slice(1));
             }
           }
         }, 250); // Debounce to prevent too many calls
